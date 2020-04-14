@@ -9,7 +9,6 @@
             "email": "info@pieterhordijk.com"
         }
     ],
-    "prefer-stable": true,
     "require": {
         "php": ">=7.3",
         "amphp/amp": "^2.4",
