@@ -2,13 +2,13 @@
 
 namespace HarmonyIO\CacheTest\Unit;
 
+use Amp\PHPUnit\AsyncTestCase;
 use HarmonyIO\Cache\Item;
 use HarmonyIO\Cache\Key;
 use HarmonyIO\Cache\Ttl;
-use HarmonyIO\PHPUnitExtension\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 
-class ItemTest extends TestCase
+class ItemTest extends AsyncTestCase
 {
     /** @var Item */
     private $item;
@@ -18,6 +18,8 @@ class ItemTest extends TestCase
 
     public function setUp(): void
     {
+        parent::setUp();
+
         $this->key = $this->createMock(Key::class);
 
         $this->item = new Item($this->key, 'TheValue', new Ttl(10));

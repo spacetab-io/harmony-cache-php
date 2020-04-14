@@ -2,97 +2,94 @@
 
 namespace HarmonyIO\CacheTest\Unit\Provider;
 
-use Amp\Redis\Client;
+use Amp\PHPUnit\AsyncTestCase;
+use Amp\Redis\QueryExecutor;
+use Amp\Redis\Redis as RedisClient;
 use Amp\Success;
 use HarmonyIO\Cache\Item;
 use HarmonyIO\Cache\Key;
-use HarmonyIO\Cache\Provider\Redis;
+use HarmonyIO\Cache\Provider\Redis as HarmonyRedisProvider;
 use HarmonyIO\Cache\Ttl;
-use HarmonyIO\PHPUnitExtension\TestCase;
-use PHPUnit\Framework\MockObject\MockObject;
 
-class RedisTest extends TestCase
+class RedisTest extends AsyncTestCase
 {
-    /** @var MockObject|Client */
-    private $client;
-
     /** @var Key */
     private $key;
 
+    /**
+     * @var \Amp\Redis\QueryExecutor|\PHPUnit\Framework\MockObject\MockObject
+     */
+    private $executor;
+
     public function setUp(): void
     {
-        $this->client = $this->createMock(Client::class);
-        $this->key    = $key = new Key('TheType', 'TheSource', 'TheHash');
+        parent::setUp();
+
+        $this->executor = $this->createMock(QueryExecutor::class);
+        $this->key      = $key = new Key('TheType', 'TheSource', 'TheHash');
     }
 
-    public function testGet(): void
+    public function testGet()
     {
-        $this->client
+        $this->executor
             ->expects($this->once())
-            ->method('get')
-            ->willReturnCallback(function (string $key) {
-                $this->assertSame('HarmonyIO_TheType_TheSource_TheHash', $key);
+            ->method('execute')
+            ->with(['get', 'HarmonyIO_TheType_TheSource_TheHash'])
+            ->willReturn(new Success('cached string'));
 
-                return new Success(true);
-            })
-        ;
+        $provider = new HarmonyRedisProvider(new RedisClient($this->executor));
 
-        (new Redis($this->client))->get($this->key);
+        yield $provider->get($this->key);
     }
 
-    public function testExistsWhenExist(): void
+    public function testExistsWhenExist()
     {
-        $this->client
+        $this->executor
             ->expects($this->once())
-            ->method('exists')
-            ->willReturn(new Success(true))
-        ;
+            ->method('execute')
+            ->willReturn(new Success(true));
 
-        $this->assertTrue((new Redis($this->client))->exists($this->key));
+        $provider = new HarmonyRedisProvider(new RedisClient($this->executor));
+
+        $this->assertTrue(yield $provider->exists($this->key));
     }
 
-    public function testExistsWhenNotExist(): void
+    public function testExistsWhenNotExist()
     {
-        $this->client
+        $this->executor
             ->expects($this->once())
-            ->method('exists')
-            ->willReturn(new Success(false))
-        ;
+            ->method('execute')
+            ->willReturn(new Success(false));
 
-        $this->assertFalse((new Redis($this->client))->exists($this->key));
+        $provider = new HarmonyRedisProvider(new RedisClient($this->executor));
+
+        $this->assertFalse(yield $provider->exists($this->key));
     }
 
-    public function testDelete(): void
+    public function testDelete()
     {
-        $this->client
+        $this->executor
             ->expects($this->once())
-            ->method('del')
-            ->willReturnCallback(function (string $key) {
-                $this->assertSame('HarmonyIO_TheType_TheSource_TheHash', $key);
+            ->method('execute')
+            ->willReturn(new Success(true));
 
-                return new Success(true);
-            })
-        ;
+        $provider = new HarmonyRedisProvider(new RedisClient($this->executor));
 
-        (new Redis($this->client))->delete($this->key);
+        yield $provider->delete($this->key);
     }
 
-    public function testStore(): void
+    public function testStore()
     {
         $item = new Item($this->key, 'TheValue', new Ttl(10));
 
-        $this->client
+        $this->executor
             ->expects($this->once())
-            ->method('set')
-            ->willReturnCallback(function (string $key, string $value, int $ttl) {
-                $this->assertSame('HarmonyIO_TheType_TheSource_TheHash', $key);
-                $this->assertSame('TheValue', $value);
-                $this->assertSame(10, $ttl);
+            ->method('execute')
+            ->with(['set', 'HarmonyIO_TheType_TheSource_TheHash', 'TheValue', 'EX', 10])
+            ->willReturn(new Success(true));
 
-                return new Success(true);
-            })
-        ;
+        $provider = new HarmonyRedisProvider(new RedisClient($this->executor));
 
-        (new Redis($this->client))->store($item);
+        yield $provider->store($item);
     }
 }

@@ -2,95 +2,102 @@
 
 namespace HarmonyIO\CacheTest\Unit\Provider;
 
+use Amp\PHPUnit\AsyncTestCase;
 use HarmonyIO\Cache\Item;
 use HarmonyIO\Cache\Key;
 use HarmonyIO\Cache\Provider\InMemory;
 use HarmonyIO\Cache\Ttl;
-use HarmonyIO\PHPUnitExtension\TestCase;
+use function Amp\delay;
 
-class InMemoryTest extends TestCase
+class InMemoryTest extends AsyncTestCase
 {
     /** @var Key */
     private $key;
 
     public function setUp(): void
     {
+        parent::setUp();
+
         $this->key = $key = new Key('TheType', 'TheSource', 'TheHash');
     }
 
-    public function testGetReturnsNullWhenKeyDoesNotExist(): void
+    public function testGetReturnsNullWhenKeyDoesNotExist()
     {
-        $this->assertNull((new InMemory())->get($this->key));
+        $memory = new InMemory();
+
+        $this->assertNull(yield $memory->get($this->key));
     }
 
-    public function testGetReturnsItemWhenKeyExists(): void
+    public function testGetReturnsItemWhenKeyExists()
     {
         $cache = new InMemory();
 
         $cache->store(new Item($this->key, 'TheValue', new Ttl(5)));
 
-        $this->assertSame('TheValue', $cache->get($this->key));
+        $this->assertSame('TheValue', yield $cache->get($this->key));
     }
 
-    public function testGetDoesNotContainExpiredItems(): void
+    public function testGetDoesNotContainExpiredItems()
     {
         $cache = new InMemory();
 
-        $cache->store(new Item($this->key, 'TheValue', new Ttl(1)));
+        yield $cache->store(new Item($this->key, 'TheValue', new Ttl(1)));
 
-        sleep(2);
+        yield delay(2000);
 
-        $this->assertNull($cache->get($this->key));
+        $this->assertNull(yield $cache->get($this->key));
     }
 
-    public function testExistsReturnsFalseWhenKeyDoesNotExist(): void
+    public function testExistsReturnsFalseWhenKeyDoesNotExist()
     {
-        $this->assertFalse((new InMemory())->exists($this->key));
+        $memory = new InMemory();
+
+        $this->assertFalse(yield $memory->exists($this->key));
     }
 
-    public function testExistsReturnsTrueWhenKeyExists(): void
-    {
-        $cache = new InMemory();
-
-        $cache->store(new Item($this->key, 'TheValue', new Ttl(5)));
-
-        $this->assertTrue($cache->exists($this->key));
-    }
-
-    public function testExistsReturnsFalseForExpiredItems(): void
+    public function testExistsReturnsTrueWhenKeyExists()
     {
         $cache = new InMemory();
 
-        $cache->store(new Item($this->key, 'TheValue', new Ttl(1)));
+        yield $cache->store(new Item($this->key, 'TheValue', new Ttl(5)));
 
-        sleep(2);
-
-        $this->assertFalse($cache->exists($this->key));
+        $this->assertTrue(yield $cache->exists($this->key));
     }
 
-    public function testDeletePurgesItemFromCache(): void
+    public function testExistsReturnsFalseForExpiredItems()
     {
         $cache = new InMemory();
 
-        $cache->store(new Item($this->key, 'TheValue', new Ttl(5)));
-        $cache->delete($this->key);
+        yield $cache->store(new Item($this->key, 'TheValue', new Ttl(1)));
 
-        $this->assertFalse($cache->exists($this->key));
+        yield delay(2000);
+
+        $this->assertFalse(yield $cache->exists($this->key));
     }
 
-    public function testStoreStoresItem(): void
+    public function testDeletePurgesItemFromCache()
     {
         $cache = new InMemory();
 
-        $cache->store(new Item($this->key, 'TheValue', new Ttl(5)));
+        yield $cache->store(new Item($this->key, 'TheValue', new Ttl(5)));
+        yield $cache->delete($this->key);
 
-        $this->assertTrue($cache->exists($this->key));
+        $this->assertFalse(yield $cache->exists($this->key));
     }
 
-    public function testStoreReturnsTrue(): void
+    public function testStoreStoresItem()
     {
         $cache = new InMemory();
 
-        $this->assertTrue($cache->store(new Item($this->key, 'TheValue', new Ttl(5))));
+        yield $cache->store(new Item($this->key, 'TheValue', new Ttl(5)));
+
+        $this->assertTrue(yield $cache->exists($this->key));
+    }
+
+    public function testStoreReturnsTrue()
+    {
+        $cache = new InMemory();
+
+        $this->assertTrue(yield $cache->store(new Item($this->key, 'TheValue', new Ttl(5))));
     }
 }

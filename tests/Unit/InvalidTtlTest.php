@@ -2,10 +2,10 @@
 
 namespace HarmonyIO\CacheTest\Unit;
 
+use Amp\PHPUnit\AsyncTestCase;
 use HarmonyIO\Cache\InvalidTtl;
-use HarmonyIO\PHPUnitExtension\TestCase;
 
-class InvalidTtlTest extends TestCase
+class InvalidTtlTest extends AsyncTestCase
 {
     public function testConstructorSetsCorrectMessage(): void
     {

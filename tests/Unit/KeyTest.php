@@ -2,10 +2,10 @@
 
 namespace HarmonyIO\CacheTest\Unit;
 
+use Amp\PHPUnit\AsyncTestCase;
 use HarmonyIO\Cache\Key;
-use HarmonyIO\PHPUnitExtension\TestCase;
 
-class KeyTest extends TestCase
+class KeyTest extends AsyncTestCase
 {
     public function testGetType(): void
     {
